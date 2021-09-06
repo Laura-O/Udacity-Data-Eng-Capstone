@@ -8,7 +8,8 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 
-from includes.download_data import download_binance, download_fear_greed, download_historical
+from includes.download_data import download_fear_greed, download_historical
+from includes.quality_check import check_greater_than_zero
 
 default_args = {
     "owner": "airflow",
@@ -25,7 +26,7 @@ def write_data():
     cur = conn.cursor()
 
     SQL_STATEMENT = """
-        COPY tokens (ts, date, symbol, open, high, low, close, volume_btc, volume_usdt, tradecount)
+        COPY tokens (date, price, volume_24h, market_cap, symbol)
         FROM STDIN WITH CSV HEADER
         """
 
@@ -33,13 +34,18 @@ def write_data():
 
     for file in file_list:
         with open('/opt/airflow/data/tokens/' + file, 'r') as f:
-            cur.copy_expert(SQL_STATEMENT, f)
-            conn.commit()
+             cur.copy_expert(SQL_STATEMENT, f)
+             conn.commit()
 
-download_binance = PythonOperator(
-    task_id='download_binance',
-    python_callable=download_binance,
-    dag=dag)
+
+    SQL_STATEMENT2 = """
+            COPY fg (id, value, value_classification, ts, time_until_update)
+            FROM STDIN WITH CSV HEADER
+            """
+    with open('data/index/fear_greed.csv', 'r') as f:
+        cur.copy_expert(SQL_STATEMENT2, f)
+        conn.commit()
+
 
 download_fear_greed = PythonOperator(
     task_id='download_fear_greed',
@@ -56,38 +62,25 @@ create_tables = PostgresOperator(
     task_id="create_table",
     postgres_conn_id="postgres",
     sql="""
-    DROP TABLE IF EXISTS binance;
-    CREATE TABLE IF NOT EXISTS binance (
-        ts FLOAT,
-        date TIMESTAMP ,
-        symbol VARCHAR(10),
-        open FLOAT,
-        high FLOAT ,
-        low FLOAT ,
-        close FLOAT,
-        volume_btc FLOAT,
-        volume_usdt FLOAT,
-        tradecount TEXT,
-        PRIMARY KEY(ts, symbol)
-    );
-    DROP TABLE IF EXISTS history;
-    CREATE TABLE IF NOT EXISTS history (
+    DROP TABLE IF EXISTS tokens;
+    CREATE TABLE IF NOT EXISTS tokens (
         date TIMESTAMP,
         symbol VARCHAR,
         price FLOAT,
-        volume_24h INTEGER ,
-        market_cap INTEGER ,
+        volume_24h BIGINT,
+        market_cap BIGINT,
         PRIMARY KEY(date, symbol)
     );
     DROP TABLE IF EXISTS fg;
     CREATE TABLE IF NOT EXISTS fg (
-        ts TIMESTAMP,
+        ts VARCHAR,
         id INTEGER,
         value INTEGER,
         value_classification VARCHAR,
         time_until_update VARCHAR,
         PRIMARY KEY(ts, id)
     );
+    SET datestyle = dmy;
     """,
     dag=dag,
 )
@@ -97,6 +90,17 @@ fill_table = PythonOperator(
         python_callable=write_data,
         dag=dag)
 
+check_tables = PythonOperator(
+    task_id='check_data',
+    python_callable=check_greater_than_zero,
+    provide_context=True,
+    params={
+        'tables': ['tokens', 'fg'],
+    },
+    dag=dag
+)
 
-[download_binance, download_fear_greed] >> create_tables
+
+[download_historical, download_fear_greed] >> create_tables
 create_tables >> fill_table
+fill_table >> check_tables
