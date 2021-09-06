@@ -8,7 +8,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 
-from includes.download_data import download_binance, download_fear_greed
+from includes.download_data import download_binance, download_fear_greed, download_historical
 
 default_args = {
     "owner": "airflow",
@@ -46,12 +46,18 @@ download_fear_greed = PythonOperator(
     python_callable=download_fear_greed,
     dag=dag)
 
-create_table = PostgresOperator(
+download_historical = PythonOperator(
+    task_id='download_historical',
+    python_callable=download_historical,
+    dag=dag)
+
+
+create_tables = PostgresOperator(
     task_id="create_table",
     postgres_conn_id="postgres",
     sql="""
-    DROP TABLE tokens;
-    CREATE TABLE IF NOT EXISTS tokens (
+    DROP TABLE IF EXISTS binance;
+    CREATE TABLE IF NOT EXISTS binance (
         ts FLOAT,
         date TIMESTAMP ,
         symbol VARCHAR(10),
@@ -63,7 +69,25 @@ create_table = PostgresOperator(
         volume_usdt FLOAT,
         tradecount TEXT,
         PRIMARY KEY(ts, symbol)
-    )
+    );
+    DROP TABLE IF EXISTS history;
+    CREATE TABLE IF NOT EXISTS history (
+        date TIMESTAMP,
+        symbol VARCHAR,
+        price FLOAT,
+        volume_24h INTEGER ,
+        market_cap INTEGER ,
+        PRIMARY KEY(date, symbol)
+    );
+    DROP TABLE IF EXISTS fg;
+    CREATE TABLE IF NOT EXISTS fg (
+        ts TIMESTAMP,
+        id INTEGER,
+        value INTEGER,
+        value_classification VARCHAR,
+        time_until_update VARCHAR,
+        PRIMARY KEY(ts, id)
+    );
     """,
     dag=dag,
 )
@@ -74,5 +98,5 @@ fill_table = PythonOperator(
         dag=dag)
 
 
-download_binance >> create_table
-create_table >> fill_table
+[download_binance, download_fear_greed] >> create_tables
+create_tables >> fill_table
