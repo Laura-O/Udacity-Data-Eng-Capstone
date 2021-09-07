@@ -1,0 +1,7 @@
+dash
+matplotlib
+plotly
+plotly-express
+sqlalchemy
+psycopg2
+dash_bootstrap_components
