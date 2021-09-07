@@ -1,6 +1,5 @@
 import requests
 import os
-import csv
 import logging
 import json
 import pandas as pd
@@ -32,29 +31,34 @@ def download_fear_greed():
     data_path = "/opt/airflow/data/index"
     file_path = os.path.join(data_path, "fear_greed.csv")
 
-    url = "https://api.alternative.me/fng/?limit=0&date_format=uk"
+    url = "https://api.alternative.me/fng/?limit=0&date_format=us"
+    logging.info(f"Retrieving Data from {url}")
 
     raw_text = requests.get(url, verify='dags/includes/consolidate_alt.pem').text
     raw_json = json.loads(raw_text)
 
     df = pd.DataFrame(raw_json['data'])
+
     df.to_csv(file_path)
 
 
 def download_historical():
-    data_path = "/opt/airflow/data/coinp"
+    data_path = "/opt/airflow/data/tokens"
 
-    token_ids = ['btc-bitcoin', 'eth-ethereum', 'sol-solana', 'ada-cardano']
+    token_ids = ['btc-bitcoin', 'eth-ethereum',
+                 'sol-solana', 'ada-cardano', 'xrp-xrp',
+                 'doge-dogecoin', 'dot-polkadot',
+                 'uni-uniswap', 'ltc-litecoin',
+                 'luna-terra', 'link-chainlink',
+                 'icp-internet-computer', 'matic-polygon',
+                 'avax-avalanche', 'vet-vechain']
 
     for token in token_ids:
         file_path = os.path.join(data_path, token + ".csv")
 
         p_client = Client()
+        raw_text = p_client.historical(token, start="2018-02-01", limit=5000, interval="1d")
 
-        raw_text = p_client.historical(token, start="2021-01-01", limit=5000, interval="1d")
-
-        keys = raw_text[0].keys()
-        with open(file_path, 'w', newline='') as output_file:
-            dict_writer = csv.DictWriter(output_file, keys)
-            dict_writer.writeheader()
-            dict_writer.writerows(raw_text, "id")
+        df = pd.DataFrame(raw_text)
+        df['token'] = token
+        df.to_csv(file_path, index=False)
