@@ -3,29 +3,62 @@ import os
 import logging
 import json
 import pandas as pd
+import io
 
 from coinpaprika.client import Client
 
 def download_binance():
-    data_path = "/opt/airflow/data/tokens"
-
-    tokens = ["BTCUSDT", "SOLUSDT"]
-    tick="d"
+    data_path = "/opt/airflow/data/binance"
+    tokens = ["BTCUSDT", "ETHUSDT", "XRPUSDT", "LINKUSDT", "LTCUSDT", "ADAUSDT",
+              "EOSUSDT", "BNBUSDT"]
 
     for token in tokens:
-        filename = "{}_{}.csv".format(token, tick)
+        filename = "{}.csv".format(token)
         file_path = os.path.join(data_path, filename)
 
-        url = "https://www.cryptodatadownload.com/cdd/Binance_{}_{}.csv".format(token, tick)
+        url = "https://www.cryptodatadownload.com/cdd/{}_Binance_futures_data_day.csv".format(token)
 
         logging.info(f"Retrieving Data from {url}")
-        raw_text = requests.get(url, verify='dags/includes/consolidate.pem').text
-        head, raw_text = raw_text.split('\n', 1)
+        raw_text = requests.get(url, verify='dags/includes/consolidate.pem').content
 
-        with open(file_path, 'w') as text_file:
-            text_file.write(raw_text)
+        df = pd.read_csv(io.StringIO(raw_text.decode('utf-8')), skiprows=1)
+        df.columns = ['unix', 'date', 'symbol', 'open', 'high', 'low', 'close', 'volume_token', 'volume_usd',
+                      'tradecount']
+        df = df.drop('tradecount', 1)
+        df = df.drop('unix', 1)
+        df['exchange'] = 'binance'
 
-        print("Saved %s" % file_path)
+        dict = {'BTC/USDT': 'BTC-PERP', 'ETH/USDT': 'ETH-PERP', 'XRP/USDT': 'XRP-PERP', 'LINK/USDT': 'LINK-PERP',
+                'LTC/USDT': 'LTC-PERP', 'ADA/USDT': 'ADA-PERP', 'EOS/USDT': 'EOS-PERP', 'BNB/USDT': 'BNB-PERP'}
+
+        df['symbol'] = df['symbol'].map(dict)
+
+        df.to_csv(file_path, index=False)
+
+        logging.info("Saved %s" % file_path)
+
+def download_ftx():
+    data_path = "/opt/airflow/data/ftx"
+    tokens = ["BTCPERP", "ETHPERP", "XRPPERP", "LINKPERP", "LTCPERP",
+              "ADAPERP", "EOSPERP", "BNBPERP"]
+
+    for token in tokens:
+        filename = "{}.csv".format(token)
+        file_path = os.path.join(data_path, filename)
+
+        url = "https://www.cryptodatadownload.com/cdd/FTX_Futures_{}_d.csv".format(token)
+
+        logging.info(f"Retrieving Data from {url}")
+        raw_text = requests.get(url, verify='dags/includes/consolidate.pem').content
+
+        df = pd.read_csv(io.StringIO(raw_text.decode('utf-8')), skiprows=1)
+        df.columns = ['unix', 'date', 'symbol', 'open', 'high', 'low', 'close', 'volume_token', 'volume_usd']
+        df = df.drop('unix', 1)
+        df['exchange'] = 'ftx'
+
+        df.to_csv(file_path, index=False)
+
+        logging.info("Saved %s" % file_path)
 
 def download_fear_greed():
     data_path = "/opt/airflow/data/index"
