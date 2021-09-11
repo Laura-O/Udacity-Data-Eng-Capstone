@@ -1,6 +1,7 @@
 import requests
 
-from coinpaprika import exceptions
+from coinpaprika.exceptions import CoinpaprikaAPIException, CoinpaprikaRequestException
+
 
 class Client(object):
     API_URL = "https://api.coinpaprika.com/v1"

@@ -3,11 +3,14 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 import logging
 
 def write_data():
+    """Write downloaded data to database.
+    """
+
     conn = PostgresHook(postgres_conn_id='postgres').get_conn()
     cur = conn.cursor()
 
     SQL_STATEMENT = """
-            COPY tokens (date, price, volume_24h, market_cap, symbol)
+            COPY historical (date, price, volume_24h, market_cap, symbol)
             FROM STDIN WITH CSV HEADER
             """
 
@@ -47,3 +50,19 @@ def write_data():
         with open('/opt/airflow/data/ftx/' + file, 'r') as f:
             cur.copy_expert(SQL_STATEMENT3, f)
             conn.commit()
+
+
+def token_facts():
+    """Fill fact tables with data from spreadsheet."""
+
+    conn = PostgresHook(postgres_conn_id='postgres').get_conn()
+    cur = conn.cursor()
+
+    SQL_STATEMENT_TOKENS = """
+            COPY tokens (id, historical, futures, name)
+                    FROM STDIN WITH CSV HEADER
+            """
+
+    with open('data/tokens.csv', 'r') as f:
+        cur.copy_expert(SQL_STATEMENT_TOKENS, f)
+        conn.commit()

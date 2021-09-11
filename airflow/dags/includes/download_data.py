@@ -8,7 +8,9 @@ import io
 from coinpaprika.client import Client
 
 def download_binance():
-    data_path = "/opt/airflow/data/binance"
+    """Download data of Binance futures from API."""
+
+    data_path = "data/binance"
     tokens = ["BTCUSDT", "ETHUSDT", "XRPUSDT", "LINKUSDT", "LTCUSDT", "ADAUSDT",
               "EOSUSDT", "BNBUSDT"]
 
@@ -16,7 +18,7 @@ def download_binance():
         filename = "{}.csv".format(token)
         file_path = os.path.join(data_path, filename)
 
-        url = "https://www.cryptodatadownload.com/cdd/{}_Binance_futures_data_day.csv".format(token)
+        url = "https://www.cryptodatadownload.com/cdd/{}_Binance_futures_data_hour.csv".format(token)
 
         logging.info(f"Retrieving Data from {url}")
         raw_text = requests.get(url, verify='dags/includes/consolidate.pem').content
@@ -28,17 +30,19 @@ def download_binance():
         df = df.drop('unix', 1)
         df['exchange'] = 'binance'
 
-        dict = {'BTC/USDT': 'BTC-PERP', 'ETH/USDT': 'ETH-PERP', 'XRP/USDT': 'XRP-PERP', 'LINK/USDT': 'LINK-PERP',
+        token_dict = {'BTC/USDT': 'BTC-PERP', 'ETH/USDT': 'ETH-PERP', 'XRP/USDT': 'XRP-PERP', 'LINK/USDT': 'LINK-PERP',
                 'LTC/USDT': 'LTC-PERP', 'ADA/USDT': 'ADA-PERP', 'EOS/USDT': 'EOS-PERP', 'BNB/USDT': 'BNB-PERP'}
 
-        df['symbol'] = df['symbol'].map(dict)
+        df['symbol'] = df['symbol'].map(token_dict)
 
         df.to_csv(file_path, index=False)
 
         logging.info("Saved %s" % file_path)
 
 def download_ftx():
-    data_path = "/opt/airflow/data/ftx"
+    """Download data of FTX futures from API."""
+
+    data_path = "data/ftx"
     tokens = ["BTCPERP", "ETHPERP", "XRPPERP", "LINKPERP", "LTCPERP",
               "ADAPERP", "EOSPERP", "BNBPERP"]
 
@@ -46,7 +50,7 @@ def download_ftx():
         filename = "{}.csv".format(token)
         file_path = os.path.join(data_path, filename)
 
-        url = "https://www.cryptodatadownload.com/cdd/FTX_Futures_{}_d.csv".format(token)
+        url = "https://www.cryptodatadownload.com/cdd/FTX_Futures_{}_1h.csv".format(token)
 
         logging.info(f"Retrieving Data from {url}")
         raw_text = requests.get(url, verify='dags/includes/consolidate.pem').content
@@ -61,7 +65,9 @@ def download_ftx():
         logging.info("Saved %s" % file_path)
 
 def download_fear_greed():
-    data_path = "/opt/airflow/data/index"
+    """Download historical data of fear and greed index."""
+
+    data_path = "data/index"
     file_path = os.path.join(data_path, "fear_greed.csv")
 
     url = "https://api.alternative.me/fng/?limit=0&date_format=us"
@@ -76,7 +82,9 @@ def download_fear_greed():
 
 
 def download_historical():
-    data_path = "/opt/airflow/data/tokens"
+    """Download historical data from API."""
+
+    data_path = "data/tokens"
 
     token_ids = ['btc-bitcoin', 'eth-ethereum',
                  'sol-solana', 'ada-cardano', 'xrp-xrp',
