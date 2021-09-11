@@ -21,11 +21,15 @@ The crypto community focuses a lot on short-term data. A few days in crypto can 
 
 There are countless data resources on the internet but they are rarely combined and matched. Considering the sheer amount of data this is definitely a mammoth task which would not be possible to do in a single ETL process.
 
+Therefore, this is a start to structure available information a bit better and to put it in a dashboard for easier visualization.
+
 ## Step 2: Project scope and purpose
 
 The data I finally used in this project contains different abbreviations and symbols for the tokens. For the ones saved in the same database, I am fixing this right after downloading the data from the API so the symbols are consistent in the database. To have a connection between the different tables, I decided to create a facts table containing all the used terms, a unique symbol and the full name.
 
 ## Step 3: Define the data model
+
+The data model is setup around the central fact table containing all used symbols.
 
 ![Database](assets/db.png?raw=true "ER Diagram")
 
@@ -37,9 +41,7 @@ The data I finally used in this project contains different abbreviations and sym
 * Prepare the data
 * Create database tables for historical data, futures, and the fear and greed index
 * Insert the data into the database
-* Check if the data was inserted correctly
-
-
+* Check if the data was inserted correctly by checking if there are rows in the tables and if the maximum date is smaller than the current date.
 
 # Prerequisites
 
@@ -64,6 +66,13 @@ Install the required packages:
 After this is finished, the dashboard can be started with `python app.py`.
 
 ![Dashboard](assets/dashboard.png?raw=true "Dashboard")
+
+# Tool decisions
+
+* Airflow to run the pipeline as it is an convenient tool which allow a comfortable management of pipeline steps and requirements. It also has low requirements and can be run locally.
+* PostgreSQL as a standard for relational databases. As the data we use is generally well structures, a relational database is used.
+* Pandas for cleaning and preparing data frames is also a standard.
+* Dash as a dashboard allows a quick and smooth creation of dashboards but also brings additional features for more advanced implementation (e.g., adding Redis for caching).
 
 # Other scenarios
 
