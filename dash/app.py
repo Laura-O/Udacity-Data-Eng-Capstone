@@ -11,12 +11,10 @@ from plotly.subplots import make_subplots
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
 
-
-CONTENT_STYLE = {
-    "margin-left": "18rem",
-    "margin-right": "2rem",
+CONTAINER_STYLE = {
+    "margin": "5rem 18rem",
     "padding": "2rem 1rem",
 }
 
@@ -24,8 +22,8 @@ content = html.Div([
     html.Div([
         dbc.Row([
             dbc.Col([
-                html.P(
-                    "Select tokens", className="lead"
+                dbc.Label(
+                    "Select token"
                 ),
                 dcc.Dropdown(
                     options=[
@@ -49,17 +47,26 @@ content = html.Div([
                     id='dropdown-tokens'
                 )
             ], width=3)
-        ])
+        ], style={"padding-top": "1em"})
     ]),
     dcc.Graph(id='fg')
-], id="page-content", style=CONTENT_STYLE)
+], id="page-content")
 
 heatmap = html.Div(
-    dcc.Graph(id='heatmap'),
+    [dbc.Row([
+        dbc.Col([
+            dcc.Graph(id='heatmap')
+        ], align="center")
+    ], style={"margin": "auto", "width": "50%" })]
 )
 
 futures = html.Div([
-    dcc.Dropdown(
+    dbc.Row([
+        dbc.Col([
+            dbc.Label(
+                    "Select token"
+            ),
+            dcc.Dropdown(
                     options=[
                         {'label': 'Bitcoin', 'value': 'BTC-PERP'},
                         {'label': 'Ethereum', 'value': 'ETH-PERP'},
@@ -73,17 +80,20 @@ futures = html.Div([
                     value=['btc-bitcoin'],
                     id='dropdown-futures'
                 ),
+        ], width=3)
+    ], style={"padding-top": "1em", "padding-bottom": ".5em"}),
     dcc.Graph(id='futures')
 ])
 
 app.layout = dbc.Container([
-dcc.Store(id="store"),
-        html.H1("Dynamically rendered tab content"),
-        html.Hr(),
-        html.P(
-                    "Select timeframe", className="lead"
+    html.H2("Crypto Dashboard"),
+    dcc.Store(id="store"),
+        dbc.Row([
+            dbc.Col([
+                dbc.Label(
+                    "Select timeframe"
                 ),
-        dcc.Dropdown(
+                dcc.Dropdown(
                     options=[
                              {'label': '7 days', 'value': 7},
                              {'label': '1 month', 'value': 31},
@@ -91,7 +101,9 @@ dcc.Store(id="store"),
                         ],
                         value=7,
                         id='dropdown'
-                        ),
+                    ),
+            ], width='auto')
+        ], style={"padding-bottom": "2em"}),
         dbc.Tabs(
             [
                 dbc.Tab(futures, label="Futures", tab_id="futures"),
@@ -99,15 +111,15 @@ dcc.Store(id="store"),
                 dbc.Tab(heatmap, label="Heatmap", tab_id="heatmap"),
             ],
             id="tabs",
-            active_tab="scatter",
+            active_tab="futures",
         ),
         html.Div(id="tab-content", className="p-4"),
         dcc.Location(id="url"),
-])
+], style=CONTAINER_STYLE)
 
 db = connect_to_db()
 
-
+# Generating the fear and greed tba
 @app.callback(
     Output('fg', 'figure'),
     Input('dropdown', 'value'),
@@ -118,16 +130,19 @@ def update_output(day_value, token_value):
     fig1 = make_subplots(specs=[[{"secondary_y": True}]])
     fig1.add_trace(
         go.Scatter(x=df_filtered_tokens['date'], y=df_filtered_tokens['price'], name="Price"),
-        secondary_y=False,
+        secondary_y=False
     )
     fig1.add_trace(
         go.Scatter(x=df_fg['ts'], y=df_fg['value'], name="Fear & Greed"),
         secondary_y=True,
     )
+
+    fig1.layout.template = 'plotly_dark'
+
     fig1.update_layout(
         title_text="Token + Fear & Greed"
     )
-    fig1.update_layout(showlegend=False)
+    fig1.update_layout(showlegend=False,  paper_bgcolor='rgb(6,6,6)')
     fig1.update_yaxes(
         title_text="Token",
         secondary_y=False)
@@ -137,7 +152,7 @@ def update_output(day_value, token_value):
 
     return fig1
 
-
+# Generating the heatmap tab
 @app.callback(
     Output('heatmap', 'figure'),
     Input('dropdown', 'value'))
@@ -147,11 +162,13 @@ def generate_heatmap(day_value):
     reshape = df_tokens.pivot(index='date', columns='symbol', values='price')
     corrM = reshape.corr()
     fig2 = px.imshow(corrM)
+    fig2.layout.template = 'plotly_dark'
     fig2.update_xaxes(side="top")
-    fig2.update_layout(width=700, height=700)
+    fig2.update_layout(width=700, height=700, paper_bgcolor='rgb(6,6,6)')
 
     return fig2
 
+# Generating the futures tab plot
 @app.callback(
     Output('futures', 'figure'),
     Input('dropdown', 'value'),
@@ -160,8 +177,8 @@ def generate_futures(days, value):
     df_tokens = query_futures(days, value, db)
 
     fig = px.line(df_tokens,
-                  x="date", y="open", color='exchange')
-
+                  x="date", y="open", color='exchange', template='plotly_dark')
+    fig.update_layout(paper_bgcolor='rgb(6,6,6)')
     return fig
 
 
