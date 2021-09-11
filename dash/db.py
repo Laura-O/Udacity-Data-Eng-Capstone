@@ -1,10 +1,18 @@
+import os
 from datetime import date, timedelta
 import pandas as pd
 from sqlalchemy import create_engine
 
 def connect_to_db():
 	"""Connect to the database"""
-	return create_engine('postgresql://postgres:pspwd@localhost:5432/postgres')
+	user = os.environ.get('DB_USER')
+	password = os.environ.get('DB_PASSWORD')
+	host = os.environ.get('DB_HOST')
+	port = os.environ.get('DB_PORT')
+
+	return create_engine('postgresql://{user}:{password}@localhost:5432/postgres'.format(
+		user=user, password=password, host=host, port=port)
+	)
 
 def query_fg(days, selected_token, db):
 	"""
@@ -39,8 +47,7 @@ def query_tokens(days, db):
 	start_date = date.today() - timedelta(days=days)
 	sql_statement = "SELECT * FROM historical WHERE date >= '{start}' AND date <= '{end}'".format(start=start_date, end=end_date)
 
-	df = pd.read_sql(sql_statement, db)
-	return df
+	return pd.read_sql(sql_statement, db)
 
 def query_futures(days, future, db):
 	"""
@@ -55,5 +62,4 @@ def query_futures(days, future, db):
 	start_date = date.today() - timedelta(days=days)
 
 	sql_statement = "SELECT * FROM futures WHERE symbol = '{future}' AND date >= '{start}' AND date <= '{end}'".format(future=''.join(future), start=start_date, end=end_date)
-	df = pd.read_sql(sql_statement, db)
-	return df
+	return pd.read_sql(sql_statement, db)
