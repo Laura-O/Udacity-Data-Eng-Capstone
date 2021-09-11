@@ -27,7 +27,7 @@ The data I finally used in this project contains different abbreviations and sym
 
 ## Step 3: Define the data model
 
-![Database](assets\db.png "ER Diagram")
+![Database](assets/db.png?raw=true "ER Diagram")
 
 ## Step 4: Run ETL to Model the Data
 
@@ -63,7 +63,7 @@ Install the required packages:
 
 After this is finished, the dashboard can be started with `python app.py`.
 
-![Dashboard](assets\dashboard.png "Dashboard")
+![Dashboard](assets/dashboard.png?raw=true "Dashboard")
 
 # Other scenarios
 
