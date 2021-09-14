@@ -40,6 +40,50 @@ the used symbols and abbreviations and dimension tables containing the associate
 connection between the different datasets as it connects the different identifiers and indexes and does not require 
 additional `JOIN`s.
 
+#### Table: `tokens`
+
+| Column        | Description   | 
+| ------------- |-------------| 
+| id      | token name, primary key | 
+| historical      | token name in historical data      | 
+| futures | token name in futures data      |
+| name | full name      |
+
+#### Table: `fear and greed`
+
+| Column        | Description   | 
+| ------------- |-------------| 
+| ts      | timestamp, primary key |
+| value | index value      |
+| value_classification | value class      |
+| time_until_update | time until the the next entry      |
+
+#### Table: `futures`
+
+| Column        | Description   | 
+| ------------- |-------------| 
+| date          | timestamp, composite primary key | 
+| symbol        | timestamp, composite primary key | 
+| open | open price      |
+| high      | maximum price | 
+| low      | minimum price      | 
+| close | closing price      | 
+| volume_token      | volume of the token | 
+| volume_usd      | volume in USD      | 
+| exchange | exchange, composite primary key | 
+
+
+#### Table: `historical`
+
+| Column        | Description   | 
+| ------------- |-------------| 
+| date      | timestamp, composite primary key | 
+| symbol      | token symbol, composite primary key      | 
+| price | price      | 
+| volume_24h      | volume in 24h      | 
+| market_cap | market cap of token      | 
+
+
 ## Step 4: Run ETL to Model the Data
 
 ![Pipeline](assets/pipeline.png?raw=true "Pipeline")
@@ -49,6 +93,19 @@ additional `JOIN`s.
 * Create database tables for historical data, futures, and the fear and greed index
 * Insert the data into the database
 * Check if the data was inserted correctly
+
+## ETL results
+
+This is an example query for the Bitcoin price and the fear and greed index for the last 7 days:
+
+    SELECT date, symbol, price, value as fear_greed FROM historical h
+    LEFT JOIN fg AS fg ON h.date = fg.ts
+    WHERE symbol = 'btc-bitcoin' AND date > current_date - interval '8 days'
+
+
+Visualizing this data in a plot:
+
+![Plot](assets/btc-fg.png?raw=true "Plot")
 
 # Tools
 
